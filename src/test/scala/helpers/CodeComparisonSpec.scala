@@ -1,54 +1,44 @@
 package helpers
 
 import org.specs2.mutable.Specification
-import scala.compat.Platform.EOL
+import org.specs2.matcher.{Matcher, MatchResult, Expectable}
+import scala.reflect.runtime.universe._
 
-trait CodeComparisonSpec extends Specification with ContextMock with CompileSpec {
+trait CodeComparisonSpec extends Specification with CompileSpec {
   sequential
 
-  import Colors._
-  import contextMock.universe._
-
-  trait ExpectedCode
-  case class With(code: String) extends ExpectedCode
-  case class Not(code: String) extends ExpectedCode
+  import ErrorMessage._, TreeComparison._
 
   implicit def TreeToWith(t: Tree): With = With(showCode(t))
   implicit def StringToWith(code: String): With = With(code)
 
-  private def errorMessage(source: Tree, generated: String, head: String, body: String) = {
-    highlight(comparableWildcards(showCode(source))) +
-      EOL + bold(red("--- generates: ---")) + EOL +
-      highlight(comparableWildcards(generated)) +
-      EOL + bold(red(s"--- $head: ---")) + EOL +
-      body +
-      EOL + bold(red("----------")) + EOL
+  def containsSnippet(generated: Tree, snippet: String) = comparable(showCode(generated)).contains(comparable(snippet))
+
+  def containsExpected(generated: Tree, expected: ExpectedCode) = {
+    expected match {
+      case With(snippet) => containsSnippet(generated, snippet)
+      case Not(snippet)  => !containsSnippet(generated, snippet)
+    }
   }
 
-  private def compileErrorMessage(source: Tree, generated: String, reason: String) = {
-    errorMessage(source, generated, "which doesn't compile", reason)
+  def unexpectedSnippets(source: Tree, generated: Tree, snippets: Seq[ExpectedCode]): Seq[ExpectedCode] = {
+    snippets.filterNot(containsExpected(generated, _))
   }
 
-  private def compareErrorMessage(source: Tree, generated: String, snippet: String, shouldContain: Boolean) = {
-    val failMsg = if(shouldContain) "which doesn't contain" else "which contains but shouldn't"
-    errorMessage(source, generated, failMsg, highlight(comparableWildcards(snippet)))
-  }
+  def compiledContains(snippets: Seq[ExpectedCode]) = new Matcher[Tree] {
+    import scala.compat.Platform.EOL
 
-  private val wildcardRegex = "_\\$\\d+".r
-  private def comparableWildcards(code: String) = wildcardRegex.replaceAllIn(code, "_")
-  private def withoutSpaces(code: String) = code.replaceAll("\\s", "")
-  private def comparable(code: String) = withoutSpaces(comparableWildcards(code))
-  private def containsCode(source: Tree, generated: String, snippets: Seq[ExpectedCode]) = snippets.map {
-    case With(snippet) =>
-      comparable(generated) must (contain(comparable(snippet))).updateMessage(_ => compareErrorMessage(source, generated, snippet, true))
-    case Not(snippet)  =>
-      comparable(generated) must (not(contain(comparable(snippet)).updateMessage(_ => compareErrorMessage(source, generated, snippet, false))))
-  }
-
-  def generatedContainsCode(source: Tree, snippets: ExpectedCode*) = {
-    val compiled = compileCode(showCode(source))
-    compiled.error.isEmpty must beTrue.updateMessage(_ => compileErrorMessage(source, compiled.generated, compiled.error.get))
-    containsCode(source, compiled.generated, snippets)
+    override def apply[T <: Tree](expectable: Expectable[T]): MatchResult[T] = {
+      val source = expectable.value
+      compileCode(source) match {
+        case CompileError(generated, error) =>
+          result(false, "", compileError(source, generated, error), expectable)
+        case CompiledCode(generated) =>
+          val failures = unexpectedSnippets(source, generated, snippets)
+          val failMsg = failures.map(failure => compareError(source, generated, failure)).mkString(EOL)
+          result(failures.isEmpty, "Everything as expected", failMsg, expectable)
+      }
+    }
   }
 }
 
