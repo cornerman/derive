@@ -1,58 +1,42 @@
 package helpers
 
-import org.specs2.mutable.Specification
-import org.specs2.matcher.{Matcher, MatchResult, Expectable}
-import scala.tools.reflect.FrontEnd
-import scala.reflect.runtime.currentMirror
+import compiler._
 import scala.reflect.runtime.universe.Tree
-import scala.tools.reflect.ToolBox
-import scala.compat.Platform.EOL
-import scala.util.{Try, Success, Failure}
+import org.specs2.mutable.Specification
+import org.specs2.matcher._
 
-object Config {
-  val paradiseJar = System.getProperty("user.home") + "/.ivy2/cache/org.scalamacros/paradise_2.11.8/jars/paradise_2.11.8-2.1.0.jar"
-  val options = s"-Xplugin-require:macroparadise -Xplugin:$paradiseJar"
-}
+class CompileMatcher(hasValidErrors: Seq[Error] => Boolean = _.isEmpty, hasValidWarnings: Seq[Warning] => Boolean = _.isEmpty) extends Matcher[CompileResult] {
+  import ErrorMessage._
 
-sealed trait CompileResult { val generated: Tree }
-case class CompiledCode(generated: Tree) extends CompileResult
-case class CompileError(generated: Tree, error: String) extends CompileResult
+  def isSuccess(compiled: CompileResult) = hasValidErrors(compiled.errors) && hasValidWarnings(compiled.warnings)
 
-class Reporter extends FrontEnd {
-  override def display(info: Info) {}
-  override def interactive() {}
-
-  def errorMessage: String = {
-    infos.map(info => s"[${info.severity}] line ${info.pos.line}: ${info.msg}").mkString(EOL)
+  override def apply[S <: CompileResult](expectable: Expectable[S]): MatchResult[S] = {
+    val compiled = expectable.value
+    isSuccess(compiled) match {
+      case true => MatchSuccess("Compiles", "", expectable)
+      case _ => MatchFailure("", compileError(compiled.source, compiled.messages), expectable)
+    }
   }
+
+  def withWarning = new CompileMatcher(hasValidErrors, _.size == 1)
+  def withWarnings = new CompileMatcher(hasValidErrors, _.nonEmpty)
+  def withWarning(msg: String) = withWarnings(msg)
+  def withWarnings(msgs: String*) = new CompileMatcher(hasValidErrors, _.map(_.msg) == msgs)
+
+  def withError = new CompileMatcher(_.size == 1, hasValidWarnings)
+  def withErrors = new CompileMatcher(_.nonEmpty, hasValidWarnings)
+  def withError(msg: String) = withErrors(msg)
+  def withErrors(msgs: String*) = new CompileMatcher(_.map(_.msg) == msgs, hasValidWarnings)
 }
 
 trait CompileSpec extends Specification {
-  import ErrorMessage._
-
-  def compileCode(tree: Tree): CompileResult = {
-    val reporter = new Reporter
-    val toolbox = currentMirror.mkToolBox(reporter, Config.options)
-
-    Try(toolbox.typecheck(tree)) match {
-      case Success(typedTree) => 
-        if (reporter.hasErrors || reporter.hasWarnings)
-          CompileError(typedTree, reporter.errorMessage)
-        else
-          CompiledCode(typedTree)
-      case Failure(e) => CompileError(tree, e.getMessage)
-    }
+  implicit class CompilableTree(tree: Tree) {
+    def compile = Compiler(tree)
   }
 
-  def compile = new Matcher[Tree] {
-    override def apply[T <: Tree](expectable: Expectable[T]): MatchResult[T] = {
-      val source = expectable.value
-      compileCode(source) match {
-        case CompileError(generated, error) =>
-          result(false, "", compileError(source, generated, error), expectable)
-        case CompiledCode(generated) =>
-          result(true, "Compiles", "", expectable)
-      }
-    }
-  }
+  def compile = new CompileMatcher
+  def warn: CompileMatcher = new CompileMatcher().withWarnings
+  def warn(msgs: String*) = new CompileMatcher().withWarnings(msgs: _*)
+  def abort: CompileMatcher = new CompileMatcher().withErrors
+  def abort(msgs: String*) = new CompileMatcher().withErrors(msgs: _*)
 }
