@@ -26,7 +26,7 @@ case class CompileFailure(source: Tree, messages: Seq[Message]) extends CompileR
   assert(errors.nonEmpty)
 }
 object CompileFailure {
-  def apply(source: Tree, e: Throwable): CompileResult = {
-    CompileFailure(source, Seq(Error(NoPosition, e.getMessage)))
+  def apply(source: Tree, e: Throwable, reporter: FrontEnd): CompileResult = {
+    CompileFailure(source, reporter.infos.map(Message(reporter)).toSeq :+ Error(NoPosition, e.getMessage))
   }
 }

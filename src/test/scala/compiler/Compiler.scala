@@ -23,7 +23,7 @@ object Compiler {
 
     Try(toolbox.typecheck(tree)) match {
       case Success(typedTree) => CompileSuccess(tree, typedTree, reporter)
-      case Failure(e) => CompileFailure(tree, e)
+      case Failure(e) => CompileFailure(tree, e, reporter)
     }
   }
 }
