@@ -23,6 +23,7 @@ class CodeSpec extends CodeComparisonSpec {
 
   "simple hello compiles" >> {
     q"@derive.hello object A".compile must compile
+    q"@derive.hello object A".compile must compile.canWarn
     q"@derive.hello object A".compile must expand.containing(q"")
   }
 
@@ -35,6 +36,7 @@ class CodeSpec extends CodeComparisonSpec {
     q"@derive.hello object A { def bar[T](l: T) = 1.isInstanceOf[T] }".compile must warn("abstract type T is unchecked since it is eliminated by erasure")
     q"@derive.hello object A { def bar[T](l: T) = 1.isInstanceOf[T] }".compile must compile.withWarning
     q"@derive.hello object A { def bar[T](l: T) = 1.isInstanceOf[T] }".compile must compile.withWarning and expand.containing(q"")
+    q"@derive.hello object A { def bar[T](l: T) = 1.isInstanceOf[T] }".compile must compile.canWarn
   }
 
   "detect error" >> {

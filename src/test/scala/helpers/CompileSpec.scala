@@ -18,6 +18,7 @@ class CompileMatcher(hasValidErrors: Seq[Error] => Boolean = _.isEmpty, hasValid
     }
   }
 
+  def canWarn = new CompileMatcher(hasValidErrors, _ => true)
   def withWarning = new CompileMatcher(hasValidErrors, _.size == 1)
   def withWarnings = new CompileMatcher(hasValidErrors, _.nonEmpty)
   def withWarning(msg: String) = withWarnings(msg)
