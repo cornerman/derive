@@ -26,7 +26,7 @@ class ContextHelper[C <: Context](val context: C) {
 
     q"""
       object $name extends ..$parents {
-        def hello: String = "hello"
+        def hello: ${typeOf[String]} = "hello"
         ..$body
       }
     """
