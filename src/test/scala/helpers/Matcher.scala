@@ -38,7 +38,7 @@ trait CompileMatcher[M <: CompileMatcher[M]] extends Matcher[CompileResult] {
   val hasValidWarnings: Seq[Warning] => Boolean
   def copy(hasValidErrors: Seq[Error] => Boolean, hasValidWarnings: Seq[Warning] => Boolean): M
 
-  def isSuccess(compiled: CompileResult) = hasValidErrors(compiled.errors) && hasValidWarnings(compiled.warnings)
+  private def isSuccess(compiled: CompileResult) = hasValidErrors(compiled.errors) && hasValidWarnings(compiled.warnings)
 
   override def apply[S <: CompileResult](expectable: Expectable[S]): MatchResult[S] = {
     val compiled = expectable.value
