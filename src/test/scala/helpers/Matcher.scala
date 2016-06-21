@@ -72,3 +72,11 @@ class SuccessCompileMatcher(val hasValidWarnings: Seq[Warning] => Boolean = _.is
 class FailureCompileMatcher(val hasValidErrors: Seq[Error] => Boolean, val hasValidWarnings: Seq[Warning] => Boolean) extends CompileMatcher[FailureCompileMatcher] {
   def copy(hasValidErrors: Seq[Error] => Boolean, hasValidWarnings: Seq[Warning] => Boolean) = new FailureCompileMatcher(hasValidErrors, hasValidWarnings)
 }
+
+class CompileTreeMatcher(matcher: Matcher[CompileResult]) extends Matcher[Tree] {
+  override def apply[S <: Tree](expectable: Expectable[S]): MatchResult[S] = {
+    val compiled = Compiler(expectable.value)
+    val result = matcher(createExpectable(compiled))
+    result.setExpectable(expectable).asInstanceOf[MatchResult[S]]
+  }
+}

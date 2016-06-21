@@ -6,12 +6,9 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher._
 
 trait CompileSpec extends Specification {
-  implicit class CompilableTree(tree: Tree) {
-    def compile = Compiler(tree)
-  }
-
   implicit def TreeToWith(t: Tree): With = With(t)
   implicit def StringToWith(code: String): With = With(q"$code")
+  implicit def CompileMatcherToCompileTreeMatcher(matcher: Matcher[CompileResult]) = new CompileTreeMatcher(matcher)
 
   def compile = new SuccessCompileMatcher()
   def canWarn = new SuccessCompileMatcher().canWarn
