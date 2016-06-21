@@ -11,9 +11,9 @@ trait CompileSpec extends Specification {
   implicit def CompileMatcherToCompileTreeMatcher(matcher: Matcher[CompileResult]) = new CompileTreeMatcher(matcher)
 
   def compile = new SuccessCompileMatcher()
-  def canWarn = new SuccessCompileMatcher().canWarn
-  def warn = new SuccessCompileMatcher().withWarnings
-  def warn(msgs: String*) = new SuccessCompileMatcher().withWarnings(msgs: _*)
-  def abort = new SuccessCompileMatcher().withErrors
-  def abort(msgs: String*) = new SuccessCompileMatcher().withErrors(msgs: _*)
+  def canWarn = compile.canWarn
+  def warn = compile.withWarnings
+  def warn(msgs: String*) = compile.withWarnings(msgs: _*)
+  def abort = compile.withErrors
+  def abort(msgs: String*) = compile.withErrors(msgs: _*)
 }

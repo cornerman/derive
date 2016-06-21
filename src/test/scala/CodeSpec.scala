@@ -39,7 +39,7 @@ class CodeSpec extends CompileSpec {
     q"@derive.hello object A { val foo: String = 2 }" must compile.withError
   }
 
-  "detect error" >> {
+  "detect abort in macro" >> {
     q"@derive.hello class A" must abort
     q"@derive.hello class A" must abort("reflective typecheck has failed: Cannot match object pattern")
     q"@derive.hello class A" must compile.withError
