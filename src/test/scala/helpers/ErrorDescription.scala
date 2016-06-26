@@ -3,7 +3,7 @@ package helpers
 import compiler.Message
 import scala.reflect.runtime.universe._
 
-object ErrorMessage {
+object ErrorDescription {
   import Colors._
   import scala.compat.Platform.EOL
 
