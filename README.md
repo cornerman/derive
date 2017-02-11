@@ -38,5 +38,5 @@ assert(person != new Person("gisela", 52))
 * productElement
 * Product: ProductPrefix + ProductIterator + ProductArity + ProductElement (extends Product)
 * Equality: equals + canEqual + hashCode
-* Factory: apply + unapply 
-* Case: toString + copy + Equality + Factory
+* Factory: apply + unapply
+* Case: toString + copy + Product + Equality + Factory
