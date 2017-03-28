@@ -18,7 +18,7 @@ lazy val derive = (crossProject.crossType(CrossType.Pure) in file("."))
     addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-beta4" cross CrossVersion.full),
 
     libraryDependencies ++=
-      "org.scalameta" %%% "scalameta" % "1.6.0" ::
+      "org.scalameta" %% "scalameta" % "1.6.0" % "provided" ::
       "org.specs2" %% "specs2-core" % "3.8.9" % "test" ::
       "org.specs2" %% "specs2-mock" % "3.8.9" % "test" ::
       Nil,
