@@ -53,7 +53,7 @@ sealed trait ValueSelection { def select(module: ModuleDef): Either[String, Seq[
 case object AutoValues extends ValueSelection {
   def select(module: ModuleDef) = module match {
     case ClassDef(c, _) => Right(ExtractValues.fromCtor(c.ctor))
-    case m => Left("cannot select arguments from constructor: type '${m.name}' is not a class")
+    case m => Left(s"cannot select arguments from constructor: type '${m.name}' is not a class")
   }
 }
 case class ValuesByName(names: Seq[String]) extends ValueSelection {
