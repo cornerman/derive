@@ -1,12 +1,13 @@
 name := "derive"
 version := "0.1.0-SNAPSHOT"
+organization in Global := "com.github.cornerman"
 
 // scala.meta macros are at the moment only supported in 2.11.
 scalaVersion in ThisBuild := "2.11.8"
 
 resolvers += Resolver.bintrayIvyRepo("scalameta", "maven")
 
-addCompilerPlugin( "org.scalameta" % "paradise" % "3.0.0-beta4" cross CrossVersion.full)
+addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-beta4" cross CrossVersion.full)
 
 libraryDependencies ++=
   "org.scalameta" %% "scalameta" % "1.4.0" ::
