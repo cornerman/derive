@@ -10,12 +10,12 @@ class CodeSpec extends FreeSpec with MustMatchers {
       def copy(a: Int): CopyT
     }
 
-    @derive(copy)
-    case class CopyC(a: Int, b: Int) extends CopyT
+    @derive(a => copy, equals)
+    class CopyC(val a: Int, val b: Int) extends CopyT
 
-    val copy = CopyC(1, 2)
+    val copy: CopyT = new CopyC(1, 2)
 
-    copy.copy(b = 3) mustEqual CopyC(1, 3)
+    copy.copy(a = 3) mustEqual new CopyC(3, 2)
   }
 
   "derive case" in {

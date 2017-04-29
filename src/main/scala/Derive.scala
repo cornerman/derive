@@ -247,7 +247,7 @@ object Derive {
   def updateTemplate(templ: Template, methods: Seq[Defn.Def], parents: Seq[Ctor.Call]): Template = {
     //TOOD: check for existing...
     val newStats = templ.stats.toSeq.flatten ++ methods
-    templ.copy(stats = Some(Seq(newStats: _*)), parents = parents)
+    templ.copy(stats = Some(Seq(newStats: _*)), parents = templ.parents ++ parents)
   }
 
   def updateCompanion(name: String, companion: Option[Defn.Object], methods: Seq[Defn.Def], parents: Seq[Ctor.Call]): Option[Defn.Object] = {
@@ -311,6 +311,7 @@ class derive extends scala.annotation.StaticAnnotation {
 }
 
 //TODO: case class:
+//  - auto val?
 //  - class/trait toString depend on Product? scala.runtime.ScalaRunTime._toString(Foo.this);
 //  - companion with apply implements AbstractFunctionN[in..., Type], Serializable
 //  - companion has toString = typename
