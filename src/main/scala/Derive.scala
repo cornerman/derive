@@ -140,8 +140,15 @@ object Patch {
   }))
 
   case class ToString(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
-    val names = values.map(_.name).toList
-    InstanceMethod(q"override def toString: String = ${m.name} + (..$names)") //TODO tuple warning
+    val method = values.isEmpty match {
+      case true =>
+        q"override def toString: String = ${m.name}"
+      case false =>
+        val args = values.map(_.name).toList
+        q"override def toString: String = ${m.name}.+((..$args))"
+    }
+
+    InstanceMethod(method)
   })
 
   case class Unapply(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>

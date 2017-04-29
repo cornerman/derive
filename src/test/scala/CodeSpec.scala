@@ -28,6 +28,14 @@ class CodeSpec extends FreeSpec with MustMatchers {
     //TODO...
   }
 
+  "derive toString no values" in {
+    @derive(toString)
+    class Pete
+
+    val pete = new Pete
+    pete.toString mustEqual "Pete"
+  }
+
   "derive toString on values" in {
     @derive((x,y) => toString)
     trait Tret {
