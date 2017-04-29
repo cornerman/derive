@@ -1,8 +1,7 @@
 name in ThisBuild := "derive"
 version in ThisBuild := "0.1.0-SNAPSHOT"
 
-// scala.meta macros are at the moment only supported in 2.11.
-scalaVersion in ThisBuild := "2.11.8"
+scalaVersion in ThisBuild := "2.11.11"
 
 lazy val root = project.in(file(".")).
   aggregate(deriveJS, deriveJVM).
@@ -13,17 +12,12 @@ lazy val root = project.in(file(".")).
 
 lazy val derive = (crossProject.crossType(CrossType.Pure) in file("."))
   .settings(
-    resolvers += Resolver.bintrayIvyRepo("scalameta", "maven"),
-
-    addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-beta4" cross CrossVersion.full),
+    addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-M8" cross CrossVersion.full),
 
     libraryDependencies ++=
-      "org.scalameta" %% "scalameta" % "1.6.0" % "provided" ::
-      "org.specs2" %% "specs2-core" % "3.8.9" % "test" ::
-      "org.specs2" %% "specs2-mock" % "3.8.9" % "test" ::
+      "org.scalameta" %%% "scalameta" % "1.7.0" ::
+      "org.scalatest" %%% "scalatest" %  "3.0.3" % "test" ::
       Nil,
-
-    scalacOptions in Test ++= Seq("-Yrangepos"), // for Specs2
 
     // temporary workaround for https://github.com/scalameta/paradise/issues/10
     scalacOptions in (Compile, console) := Seq(), // macroparadise plugin doesn't work in repl yet.

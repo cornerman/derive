@@ -1,10 +1,10 @@
-import org.specs2.mutable.Specification
+import org.scalatest._
 import derive.derive
 
-class CodeSpec extends Specification {
+class CodeSpec extends FreeSpec with MustMatchers {
   //TODO macroni with scala meta?
 
-  "implement abstract method definition" >> {
+  "implement abstract method definition" in {
     trait CopyT {
       val a: Int
       def copy(a: Int): CopyT
@@ -15,20 +15,20 @@ class CodeSpec extends Specification {
 
     val copy = CopyC(1, 2)
 
-    copy.copy(b = 3) must beEqualTo(CopyC(1, 3))
+    copy.copy(b = 3) mustEqual CopyC(1, 3)
   }
 
-  "derive case" >> {
+  "derive case" in {
     @derive(Case)
     class Caese(val a: Int, val b: Long, val c: Double, val d: Float, val e: String)
     val caese = Caese(1, 2, 3.0, 4.0f, "5")
 
-    caese.toString must beEqualTo("""Caese(1,2,3.0,4.0,5)""") //TODO
-    caese must beEqualTo(Caese(1, 2, 3.0, 4.0f, "5"))
+    caese.toString mustEqual """Caese(1,2,3.0,4.0,5)"""
+    caese mustEqual Caese(1, 2, 3.0, 4.0f, "5")
     //TODO...
   }
 
-  "derive toString on values" >> {
+  "derive toString on values" in {
     @derive((x,y) => toString)
     trait Tret {
       val x: Int
@@ -38,38 +38,31 @@ class CodeSpec extends Specification {
 
     val tret = new Tret { val x = 13 }
 
-    tret.toString must beEqualTo("Tret(13,3)")
+    tret.toString mustEqual "Tret(13,3)"
   }
 
-  "derive multiple" >> {
+  "derive multiple" in {
     @derive((x,y) => (toString, apply), y => copy, unapply, hashCode, equals)
     class Clars(val x: Int, val y: Int)
     object Clars { def apply(x: Int) = new Clars(x, 1) }
 
     val clars = Clars(13, 14)
-    clars match {
-      case Clars(13, 14) => ok
-      case _ => failure
-    }
+    Clars.unapply(clars) mustEqual Some((13, 14))
 
     val copied = clars.copy(0)
-    clars.hashCode must not(beEqualTo(copied.hashCode))
-    clars must not(beEqualTo(copied))
-    clars must beEqualTo(Clars(13, 14))
-    clars.toString must not(beEqualTo("Clars(13, 14)"))
+    clars.hashCode must not(equal(copied.hashCode))
+    clars must not(equal(copied))
+    clars mustEqual Clars(13, 14)
+    clars.toString must not(equal("Clars(13, 14)"))
   }
 
-  "derive multiple meta" >> {
+  "derive multiple meta" in {
     @derive(Equality, Factory, Product)
     class Clazz(val x: Int, val y: Int)
 
     val clazz = Clazz(13, 14)
-    clazz must beEqualTo(Clazz(13, 14))
-    clazz.productElement(0) must beEqualTo(13)
-    clazz.productElement(1) must beEqualTo(14)
+    clazz mustEqual Clazz(13, 14)
+    clazz.productElement(0) mustEqual 13
+    clazz.productElement(1) mustEqual 14
   }
-}
-
-
-object MyApp extends App {
 }
