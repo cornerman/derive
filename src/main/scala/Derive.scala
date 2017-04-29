@@ -112,7 +112,7 @@ object PatchDsl {
     def apply(module: ModuleDef) = f(module)
   }
 
-  def select[T <: ModuleDef](selection: ValueSelection)(f: Generator[(T, Seq[Value])]): Generator[T] = t => selection.select(t).right.flatMap(values => f(t, values))
+  def select[T <: ModuleDef](selection: ValueSelection)(f: Generator[(T, Seq[Value])]): Generator[T] = t => selection.select(t).right.flatMap(values => f((t, values)))
 
   def on[T <: ModuleDef : ClassTag](f: Generator[T]): Generator[ModuleDef] = t => t match {
     case o: T => f(o)
