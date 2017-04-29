@@ -21,6 +21,10 @@ val person = new Person("hans", 52)
 println(person) // Person("hans", 52)
 assert(person == new Person("hans", 49))
 assert(person != new Person("gisela", 52))
+
+
+@derive(Case) // derive same methods as case class
+class Data(val a: Int, val b: Int)
 ```
 
 # derivables
