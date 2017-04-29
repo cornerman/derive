@@ -66,72 +66,61 @@ case class ValuesByName(names: Seq[String]) extends ValueSelection {
   }
 }
 
-sealed trait GenMethod
-case class InstanceMethod(method: Defn.Def) extends GenMethod
-case class CompanionMethod(method: Defn.Def) extends GenMethod
-
-case class PatchConfig(name: String, selection: ValueSelection)
-
 sealed trait Patch
-sealed trait Parent extends Patch { def ctor: Ctor.Call }
-sealed trait Method extends Patch { def apply(module: ModuleDef): Either[String, GenMethod] }
+case class PatchConfig(name: String, selection: ValueSelection)
+object Patch {
+  sealed trait GenMethod
+  case class InstanceMethod(method: Defn.Def) extends GenMethod
+  case class CompanionMethod(method: Defn.Def) extends GenMethod
+
+  type Generator[T] = T => Either[String, GenMethod]
+  case class Parent(ctor: Ctor.Call) extends Patch
+  object Parent { def apply(name: String) = new Parent(Ctor.Name(name)) }
+  sealed abstract class Method(f: Generator[ModuleDef]) extends Patch { def apply(m: ModuleDef) = f(m) }
+}
 
 object PatchDsl {
-  type Generator[T] = T => Either[String, GenMethod]
+  import Patch._
+
+  trait PatchTarget {
+    def patchOpt: Option[Patch]
+  }
+  trait MetaTarget extends PatchTarget { val patchOpt = None }
+  case class Target(patch: Patch) extends PatchTarget { val patchOpt = Some(patch) }
+
   implicit def ModuleDefToRight(t: GenMethod): Either[String, GenMethod] = Right(t)
+  implicit def PatchIsTarget(patch: Patch): PatchTarget = Target(patch)
 
-  sealed trait PatchContainer {
-    def patches: Set[PatchContainer]
-    def patch: Option[Patch]
-    def +(p: PatchContainer): PatchGroup = PatchGroup(patches ++ Set(p))
-
-    def resolve(seen: Set[PatchContainer] = Set.empty): Set[Patch] = {
-      if (seen contains this) seen.flatMap(_.patch)
-      else {
-        val newSeen = seen ++ Set(this)
-        patches.map(_.resolve(newSeen)).fold(Set.empty)(_ ++ _)
-      }
+  def resolve(target: PatchTarget, next: PatchTarget => Seq[PatchTarget], seen: Set[PatchTarget] = Set.empty): Set[Patch] = {
+    if (seen contains target) seen.flatMap(_.patchOpt)
+    else {
+      val newSeen = seen ++ Set(target)
+      val patches = newSeen.flatMap(_.patchOpt)
+      patches ++ next(target).map(resolve(_, next, newSeen)).fold(Set.empty)(_ ++ _)
     }
   }
 
-  case class PatchGroup(patches: Set[PatchContainer]) extends PatchContainer {
-    def patch = None
-  }
-  object PatchGroup { def apply(patches: PatchContainer*) = new PatchGroup(patches.toSet) }
-
-  abstract class MapPatch(depends: => PatchContainer) extends PatchContainer with Patch {
-    final def patch = Some(this)
-    final def patches = Set(this) ++ depends.patches
-  }
-
-  abstract class MapParent(name: String, depends: => PatchContainer = PatchGroup()) extends MapPatch(depends) with Parent {
-    def ctor = Ctor.Name(name)
-  }
-
-  abstract class MapMethod(f: Generator[ModuleDef], depends: => PatchContainer = PatchGroup()) extends MapPatch(depends) with Method {
-    def apply(module: ModuleDef) = f(module)
-  }
-
-  def select[T <: ModuleDef](selection: ValueSelection)(f: Generator[(T, Seq[Value])]): Generator[T] = t => selection.select(t).right.flatMap(values => f((t, values)))
+  def select[T <: ModuleDef](selection: ValueSelection)(f: Generator[(T, Seq[Value])]): Generator[T] =
+    t => selection.select(t).right.flatMap(values => f((t, values)))
 
   def on[T <: ModuleDef : ClassTag](f: Generator[T]): Generator[ModuleDef] = t => t match {
     case o: T => f(o)
-    case _ => Left(s"cannot generate method ???: type '${t.name}' is not a ${implicitly[ClassTag[T]].runtimeClass.getSimpleName}")
+    case _ => Left(s"cannot generate method: type '${t.name}' is not a ${implicitly[ClassTag[T]].runtimeClass.getSimpleName}")
   }
 }
 
-object Patch {
-  import PatchDsl._
+object Patches {
+  import Patch._, PatchDsl._
 
   //TODO: fresh variables everywhere
-  case class Copy(selection: ValueSelection) extends MapMethod(on[ClassDef](select(selection) { case (c, values) =>
-    val params = values.map(v => Term.Param(List.empty, v.name, Some(v.tpe), Some(v.name))).toList
-    val names = c.defn.ctor.paramss.map(_.map(v => Term.Name(v.name.value))).toList
-    val ctor = Ctor.Name(c.defn.name.value)
-    InstanceMethod(q"def copy(..$params) = new $ctor(...$names)")
+  case class Copy(selection: ValueSelection) extends Method(on[ClassDef](select(selection) { case (c, values) =>
+      val params = values.map(v => Term.Param(List.empty, v.name, Some(v.tpe), Some(v.name))).toList
+      val names = c.defn.ctor.paramss.map(_.map(v => Term.Name(v.name.value))).toList
+      val ctor = Ctor.Name(c.defn.name.value)
+      InstanceMethod(q"def copy(..$params) = new $ctor(...$names)")
   }))
 
-  case class Apply(selection: ValueSelection) extends MapMethod(on[ClassDef](select(selection) { case (c, values) =>
+  case class Apply(selection: ValueSelection) extends Method(on[ClassDef](select(selection) { case (c, values) =>
     //TODO: missing args?
     val params = values.map(v => Term.Param(List.empty, v.name, Some(v.tpe), None)).toList
     val names = c.defn.ctor.paramss.map(_.map(v => Term.Name(v.name.value))).toList
@@ -139,7 +128,7 @@ object Patch {
     CompanionMethod(q"def apply(..$params) = new $ctor(...$names)")
   }))
 
-  case class ToString(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class ToString(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     val method = values.isEmpty match {
       case true =>
         q"override def toString: String = ${m.name}"
@@ -151,7 +140,7 @@ object Patch {
     InstanceMethod(method)
   })
 
-  case class Unapply(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class Unapply(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     //TODO: missing vals?
     val vals = values.map(v => q"t.${v.name}").toList
     val res = if (values.size == 1) vals.head else q"(..$vals)"
@@ -159,7 +148,7 @@ object Patch {
     CompanionMethod(q"def unapply(that: $tpe) = Option(that).map(t => $res)")
   })
 
-  case class HashCode(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class HashCode(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     val accs = values.map {
       case Value(name, t"Int") => q"$name"
       case Value(name, t"Long") => q"scala.runtime.Statics.longHash($name)"
@@ -175,7 +164,7 @@ object Patch {
     }""")
   })
 
-  case class Equals(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class Equals(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     val tpe = Type.Name(m.name)
     val comparisons = values.map(v => q"(t.${v.name} == $tpe.this.${v.name})")
     val condition = comparisons.fold(q"$tpe.this.canEqual(that)")((a,b) => q"$a && $b")
@@ -184,9 +173,9 @@ object Patch {
       case (t: $tpe) => $condition
       case _ => false
     })""")
-  }, depends = CanEqual)
+  })
 
-  case class ProductElement(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class ProductElement(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     val tpe = Type.Name(m.name)
     val cases = values.zipWithIndex.map { case (v,i) => p"case $i => $tpe.this.${v.name}" }
 
@@ -196,32 +185,41 @@ object Patch {
     }""")
   })
 
-  case class ProductArity(selection: ValueSelection) extends MapMethod(select(selection) { case (m, values) =>
+  case class ProductArity(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
     InstanceMethod(q"def productArity: Int = ${values.size}")
   })
 
-  case class ProductIterator(selection: ValueSelection) extends MapMethod(m => {
+  case class ProductIterator(selection: ValueSelection) extends Method(m => {
     val tpe = Type.Name(m.name)
     InstanceMethod(q"override def productIterator: Iterator[Any] = scala.runtime.ScalaRunTime.typedProductIterator[Any]($tpe.this)")
-  }, depends = Product(selection))
+  })
 
-  case object ProductPrefix extends MapMethod(m => {
+  case object ProductPrefix extends Method(m => {
     InstanceMethod(q"override def productPrefix: String = ${m.name}")
   }) //TODO depends on parent whether override needed or not
 
-  case object CanEqual extends MapMethod(m => {
+  case object CanEqual extends Method(m => {
     val tpe = Type.Name(m.name)
     InstanceMethod(q"def canEqual(that: Any) = $tpe.this.isInstanceOf[$tpe]")
   })
 
-  case class Product(selection: ValueSelection) extends MapParent("Product", depends = ProductArity(selection) + ProductElement(selection) + ProductPrefix + ProductIterator(selection) + CanEqual)
+  case class Product(selection: ValueSelection) extends MetaTarget
+  case class Equality(selection: ValueSelection) extends MetaTarget
+  case class Factory(selection: ValueSelection) extends MetaTarget
+  case class Case(selection: ValueSelection) extends MetaTarget
 
-  def Equality(selection: ValueSelection) = Equals(selection) + HashCode(selection)
-  def Factory(selection: ValueSelection) = Apply(selection) + Unapply(selection)
-  def Case(selection: ValueSelection) = ToString(selection) + Copy(selection) + Equality(selection) + Product(selection) + Factory(selection)
+  val dependencies: PatchTarget => Seq[PatchTarget] = {
+    case Product(selection) => Seq(Parent("Product"), ProductArity(selection), ProductElement(selection), ProductPrefix, ProductIterator(selection), CanEqual)
+    case Equality(selection) => Seq(Equals(selection), HashCode(selection))
+    case Factory(selection) => Seq(Apply(selection), Unapply(selection))
+    case Case(selection) => Seq(ToString(selection), Copy(selection), Equality(selection), Product(selection), Factory(selection))
+    case Target(ProductIterator(selection)) => Seq(Product(selection))
+    case Target(Equals(selection)) => Seq(CanEqual)
+    case _ => Seq.empty
+  }
 
   def apply(c: PatchConfig): Either[String, Set[Patch]] = {
-    val container = Some(c.name).collect {
+    val target: Option[PatchTarget] = Some(c.name).collect {
       case "canEqual" => CanEqual //TODO c.selection: Left(s"cannot create canEqual on value selection: $v"}
       case "productPrefix" => ProductPrefix //TODO c.selection: Left(s"cannot create productPrefix on value selection: $v"}
       case "productIterator" => ProductIterator(c.selection)
@@ -239,11 +237,13 @@ object Patch {
       case "Case" => Case(c.selection)
     }
 
-    container.map(_.resolve()).toRight(s"unknown patch: ${c.name}")
+    target.map(resolve(_, dependencies)).toRight(s"unknown patch: ${c.name}")
   }
 }
 
 object Derive {
+  import Patch._
+
   def updateTemplate(templ: Template, methods: Seq[Defn.Def], parents: Seq[Ctor.Call]): Template = {
     //TOOD: check for existing...
     val newStats = templ.stats.toSeq.flatten ++ methods
@@ -258,7 +258,7 @@ object Derive {
     }
   }
 
-  def parseConfigs(configs: Seq[PatchConfig]): Either[String, Seq[Patch]] = sequence(configs.map(Patch(_))).right.map(_.flatten)
+  def parseConfigs(configs: Seq[PatchConfig]): Either[String, Seq[Patch]] = sequence(configs.map(Patches(_))).right.map(_.flatten)
 
   def deriveModule(patches: Seq[Patch])(module: ModuleDef): Either[String, ModuleDef] = {
     val distinctPatches = patches.distinct
