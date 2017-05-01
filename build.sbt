@@ -41,3 +41,28 @@ lazy val deriveJVM = derive.jvm
 lazy val deriveJS = derive.js
 
 organization in Global := "com.github.cornerman"
+
+pgpSecretRing in Global := file("secring.gpg")
+pgpPublicRing in Global := file("pubring.gpg")
+pgpPassphrase in Global := Some("".toCharArray)
+
+pomExtra := {
+  <url>https://github.com/cornerman/derkve</url>
+  <licenses>
+    <license>
+      <name>The MIT license</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/cornerman/derive</url>
+    <connection>scm:git:git@github.com:cornerman/derive.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>jkaroff</id>
+      <name>Johannes Karoff</name>
+      <url>https://github.com/cornerman</url>
+    </developer>
+  </developers>
+}

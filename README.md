@@ -4,6 +4,17 @@ derive implementations. inspired by rusts `#[derive]` and scalas case classes.
 
 # usage
 
+Dependency in build.sbt:
+```
+resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
+libraryDependencies += "com.github.cornerman" %% "derive" % "0.1.0-SNAPSHOT"
+
+addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-M8" cross CrossVersion.full),
+```
+
+# example
+
 ```
 import derive.derive
 
