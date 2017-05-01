@@ -33,7 +33,6 @@ lazy val derive = (crossProject.crossType(CrossType.Pure) in file("."))
       "-language:_" ::
       "-Xlint:_" ::
       "-Ywarn-unused" ::
-      "-Xplugin-require:macroparadise" ::
       Nil
   )
 
@@ -47,7 +46,7 @@ pgpPublicRing in Global := file("pubring.gpg")
 pgpPassphrase in Global := Some("".toCharArray)
 
 pomExtra := {
-  <url>https://github.com/cornerman/derkve</url>
+  <url>https://github.com/cornerman/derive</url>
   <licenses>
     <license>
       <name>The MIT license</name>
