@@ -36,6 +36,14 @@ class CodeSpec extends FreeSpec with MustMatchers {
     pete.toString mustEqual "Pete"
   }
 
+  "derive toString one values" in {
+    @derive(foo => toString)
+    class Pete(val foo: Int)
+
+    val pete = new Pete(1)
+    pete.toString mustEqual "Pete(1)"
+  }
+
   "derive toString on values" in {
     @derive((x,y) => toString)
     trait Tret {

@@ -129,10 +129,13 @@ object Patches {
   }))
 
   case class ToString(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
-    val method = values.isEmpty match {
-      case true =>
+    val method = values match {
+      case Nil =>
         q"override def toString: String = ${m.name}"
-      case false =>
+      case value :: Nil =>
+        val arg = value.name
+        q"""override def toString: String = ${m.name} + "(" + $arg + ")""""
+      case values =>
         val args = values.map(_.name).toList
         q"override def toString: String = ${m.name}.+((..$args))"
     }
