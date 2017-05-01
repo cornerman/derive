@@ -23,7 +23,7 @@ class CodeSpec extends FreeSpec with MustMatchers {
     class Caese(val a: Int, val b: Long, val c: Double, val d: Float, val e: String)
     val caese = Caese(1, 2, 3.0, 4.0f, "5")
 
-    caese.toString mustEqual """Caese(1,2,3.0,4.0,5)"""
+    caese.toString mustEqual s"Caese(${1},${2},${3.0},${4.0f},${5})"
     caese mustEqual Caese(1, 2, 3.0, 4.0f, "5")
     //TODO...
   }
