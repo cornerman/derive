@@ -43,15 +43,15 @@ class Data(val a: Int, val b: Int)
 * toString
 * unapply
 * hashCode
-* equals
+* equals: canEqual
 * canEqual
 * copy
 * apply
 * productPrefix
-* productIterator
+* productIterator: Product
 * productArity
 * productElement
-* Product: ProductPrefix + ProductIterator + ProductArity + ProductElement (extends Product)
-* Equality: equals + canEqual + hashCode
+* Product: (extends Product) + ProductPrefix + ProductIterator + ProductArity + ProductElement + canEqual
+* Equality: equals + hashCode
 * Factory: apply + unapply
 * Case: toString + copy + Product + Equality + Factory
