@@ -1,5 +1,4 @@
 import org.scalatest._
-import derive.derive
 
 class CodeSpec extends FreeSpec with MustMatchers {
   //TODO macroni with scala meta?
@@ -28,33 +27,35 @@ class CodeSpec extends FreeSpec with MustMatchers {
     //TODO...
   }
 
-  "derive toString no values" in {
-    @derive(toString)
-    class Pete
+  "derive toString" - {
+    "no values" in {
+      @derive(toString)
+      class Pete
 
-    val pete = new Pete
-    pete.toString mustEqual "Pete"
-  }
-
-  "derive toString one values" in {
-    @derive(foo => toString)
-    class Pete(val foo: Int)
-
-    val pete = new Pete(1)
-    pete.toString mustEqual "Pete(1)"
-  }
-
-  "derive toString on values" in {
-    @derive((x,y) => toString)
-    trait Tret {
-      val x: Int
-      val y: Int = 3
-      val z: String = "bla"
+      val pete = new Pete
+      pete.toString mustEqual "Pete"
     }
 
-    val tret = new Tret { val x = 13 }
+    "one value" in {
+      @derive(foo => toString)
+      class Pete(val foo: Int)
 
-    tret.toString mustEqual "Tret(13,3)"
+      val pete = new Pete(1)
+      pete.toString mustEqual "Pete(1)"
+    }
+
+    "multiple values" in {
+      @derive((x,y) => toString)
+      trait Tret {
+        val x: Int
+        val y: Int = 3
+        val z: String = "bla"
+      }
+
+      val tret = new Tret { val x = 13 }
+
+      tret.toString mustEqual "Tret(13,3)"
+    }
   }
 
   "derive copyF" - {
