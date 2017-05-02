@@ -9,6 +9,7 @@ object EitherHelper {
 }
 import EitherHelper._
 
+//TODO objects
 sealed trait ModuleDef {
   val name: String
   val templ: Template
@@ -113,6 +114,8 @@ object Patches {
   import Patch._, PatchDsl._
 
   //TODO: fresh variables everywhere
+
+  //TODO case object
   case class Copy(selection: ValueSelection) extends Method(on[ClassDef](select(selection) { case (c, values) =>
       val params = values.map(v => Term.Param(List.empty, v.name, Some(v.tpe), Some(v.name))).toList
       val names = c.defn.ctor.paramss.map(_.map(v => Term.Name(v.name.value))).toList
@@ -120,8 +123,25 @@ object Patches {
       InstanceMethod(q"def copy(..$params) = new $ctor(...$names)")
   }))
 
+  //TODO case object
+  case class CopyF(selection: ValueSelection) extends Method(on[ClassDef](select(selection) { case (c, values) =>
+      val params = values.map { v =>
+        val default = Term.Name("identity")
+        val inTypes = Seq(v.tpe)
+        val outType = Type.Name(v.tpe.toString) //TODO better way?
+        val returnType = Type.Function(inTypes, outType)
+        Term.Param(List.empty, v.name, Some(returnType), Some(default))
+      }.toList
+      val names = c.defn.ctor.paramss.map(_.map { v =>
+        val term = Term.Name(v.name.value)
+        q"$term(this.$term)"
+      }).toList
+      val ctor = Ctor.Name(c.defn.name.value)
+      InstanceMethod(q"def copyF(..$params) = new $ctor(...$names)")
+  }))
+
+  //TODO case object
   case class Apply(selection: ValueSelection) extends Method(on[ClassDef](select(selection) { case (c, values) =>
-    //TODO: missing args?
     val params = values.map(v => Term.Param(List.empty, v.name, Some(v.tpe), None)).toList
     val names = c.defn.ctor.paramss.map(_.map(v => Term.Name(v.name.value))).toList
     val ctor = Ctor.Name(c.defn.name.value)
@@ -232,8 +252,9 @@ object Patches {
       case "unapply" => Unapply(c.selection)
       case "hashCode" => HashCode(c.selection)
       case "equals" => Equals(c.selection)
-      case "copy" => Copy(c.selection) // TODO should always be the constructor args of a class (AutoValue?)
-      case "apply" => Apply(c.selection) // TODO should always be the constructor args of a class (AutoValue?)
+      case "copy" => Copy(c.selection)
+      case "copyF" => CopyF(c.selection)
+      case "apply" => Apply(c.selection)
       case "Product" => Product(c.selection)
       case "Equality" => Equality(c.selection)
       case "Factory" => Factory(c.selection)
@@ -264,6 +285,9 @@ object Derive {
   def parseConfigs(configs: Seq[PatchConfig]): Either[String, Seq[Patch]] = sequence(configs.map(Patches(_))).right.map(_.flatten)
 
   def deriveModule(patches: Seq[Patch])(module: ModuleDef): Either[String, ModuleDef] = {
+
+    //TODO: distinct is not engough ToString(v1) and ToString(v2) are not equal, but conflicting
+    // we should give proper error here!
     val distinctPatches = patches.distinct
     val methods = distinctPatches.collect { case m: Method => m }
     val parents = distinctPatches collect { case p: Parent => p.ctor }
@@ -314,7 +338,7 @@ class derive extends scala.annotation.StaticAnnotation {
 }
 
 //TODO: case class:
-//  - auto val?
+//  - automatic val for constructor args?
 //  - class/trait toString depend on Product? scala.runtime.ScalaRunTime._toString(Foo.this);
 //  - companion with apply implements AbstractFunctionN[in..., Type], Serializable
 //  - companion has toString = typename

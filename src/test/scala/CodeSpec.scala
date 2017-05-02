@@ -57,6 +57,30 @@ class CodeSpec extends FreeSpec with MustMatchers {
     tret.toString mustEqual "Tret(13,3)"
   }
 
+  "derive copyF" - {
+    @derive((foo,bar) => copyF)
+    class Pete(val foo: Int, val bar: String)
+    val pete = new Pete(1, "a")
+
+    "no args" in {
+      val eqCopy = pete.copyF()
+      eqCopy.foo mustEqual pete.foo
+      eqCopy.bar mustEqual pete.bar
+    }
+
+    "default arg" in {
+      val defCopy = pete.copyF(bar = _ + "a")
+      defCopy.foo mustEqual pete.foo
+      defCopy.bar mustEqual "aa"
+    }
+
+    "all args" in {
+      val diffCopy = pete.copyF(foo = _ + 1, bar = _ + "a")
+      diffCopy.foo mustEqual 2
+      diffCopy.bar mustEqual "aa"
+    }
+  }
+
   "derive multiple" in {
     @derive((x,y) => (toString, apply), y => copy, unapply, hashCode, equals)
     class Clars(val x: Int, val y: Int)

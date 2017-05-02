@@ -46,6 +46,7 @@ class Data(val a: Int, val b: Int)
 * equals: canEqual
 * canEqual
 * copy
+* copyF
 * apply
 * productPrefix
 * productIterator: Product
