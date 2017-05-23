@@ -1,4 +1,5 @@
 import org.scalatest._
+import derive.derive
 
 class CodeSpec extends FreeSpec with MustMatchers {
   //TODO macroni with scala meta?
