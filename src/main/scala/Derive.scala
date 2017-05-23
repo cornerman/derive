@@ -149,18 +149,13 @@ object Patches {
   }))
 
   case class ToString(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
-    val method = values match {
-      case Nil =>
-        q"override def toString: String = ${m.name}"
-      case value :: Nil =>
-        val arg = value.name
-        q"""override def toString: String = ${m.name} + "(" + $arg + ")""""
-      case values =>
-        val args = values.map(_.name).toList
-        q"override def toString: String = ${m.name}.+((..$args))"
+    val argsTerm = values match {
+      case Nil => q""""""""
+      case value :: Nil => q""""(" + ${value.name} + ")""""
+      case values => q"(..${values.map(_.name).toList})"
     }
 
-    InstanceMethod(method)
+    InstanceMethod(q"override def toString: String = ${m.name}.+($argsTerm)")
   })
 
   case class Unapply(selection: ValueSelection) extends Method(select(selection) { case (m, values) =>
