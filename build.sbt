@@ -4,10 +4,10 @@ version in ThisBuild := "0.1.0-SNAPSHOT"
 scalaVersion in ThisBuild := "2.11.11"
 crossScalaVersions in ThisBuild := Seq("2.11.11", "2.12.2")
 
-addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-M8" cross CrossVersion.full)
+addCompilerPlugin("org.scalameta" % "paradise" % "3.0.0-M9" cross CrossVersion.full)
 
 libraryDependencies ++=
-  "org.scalameta" %% "scalameta" % "1.7.0" ::
+  "org.scalameta" %% "scalameta" % "1.8.0" ::
   "org.scalatest" %% "scalatest" %  "3.0.3" % "test" ::
   Nil
 
