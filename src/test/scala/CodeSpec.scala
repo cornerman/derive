@@ -18,6 +18,20 @@ class CodeSpec extends FreeSpec with MustMatchers {
     copy.copy(a = 3) mustEqual new CopyC(3, 2)
   }
 
+  "derive on object" in {
+    @derive(toString)
+    object Caese
+
+    Caese.toString mustEqual s"Caese"
+  }
+
+  "derive on case object" in {
+    @derive(toString)
+    case object Caese
+
+    Caese.toString mustEqual s"Caese"
+  }
+
   "derive case" in {
     @derive(Case)
     class Caese(val a: Int, val b: Long, val c: Double, val d: Float, val e: String)

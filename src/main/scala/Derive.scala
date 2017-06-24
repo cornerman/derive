@@ -9,7 +9,7 @@ object EitherHelper {
 }
 import EitherHelper._
 
-//TODO objects
+//TODO better
 sealed trait ModuleDef {
   val name: String
   val templ: Template
@@ -29,6 +29,17 @@ case class TraitDef(defn: Defn.Trait, companion: Option[Defn.Object]) extends Mo
   val name = defn.name.value
   val templ = defn.templ
   def copy(templ: Template, companion: Option[Defn.Object]) = TraitDef(defn.copy(templ = templ), companion)
+}
+
+case class ObjectDef(defn: Defn.Object) extends ModuleDef {
+  val companion = None
+  val name = defn.name.value
+  val templ = defn.templ
+  def copy(templ: Template, companion: Option[Defn.Object]) = {
+    //TODO workaround
+    val newStats = Seq(templ.stats.toSeq.flatten: _*) ++ companion.map(_.templ.stats.toSeq.flatten).getOrElse(Seq.empty)
+    ObjectDef(defn.copy(templ = templ.copy(stats = Some(newStats))))
+  }
 }
 
 case class Value(name: Term.Name, tpe: Type.Arg)
@@ -54,6 +65,7 @@ sealed trait ValueSelection { def select(module: ModuleDef): Either[String, Seq[
 case object AutoValues extends ValueSelection {
   def select(module: ModuleDef) = module match {
     case ClassDef(c, _) => Right(ExtractValues.fromCtor(c.ctor))
+    case ObjectDef(_) => Right(Seq.empty)
     case m => Left(s"cannot select arguments from constructor: type '${m.name}' is not a class")
   }
 }
@@ -318,6 +330,7 @@ class derive extends scala.annotation.StaticAnnotation {
     val module = defn match {
       case t: Defn.Trait => TraitDef(t, None)
       case c: Defn.Class => ClassDef(c, None)
+      case o: Defn.Object => ObjectDef(o)
       case d => d.children match {
         case (t: Defn.Trait) :: (o: Defn.Object) :: Nil => TraitDef(t, Some(o))
         case (t: Defn.Class) :: (o: Defn.Object) :: Nil => ClassDef(t, Some(o))
