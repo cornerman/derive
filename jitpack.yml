@@ -1,7 +1,2 @@
-jdk:
-  - oraclejdk8
-before_install:
-   - ./prepareEnvironment.sh
 install:
-   - echo "Running a custom install command"
-   - sbt +publish
+   - sbt +publishM2
