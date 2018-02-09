@@ -4,4 +4,4 @@ before_install:
    - ./prepareEnvironment.sh
 install:
    - echo "Running a custom install command"
-   - sbt +package
+   - sbt +publish
